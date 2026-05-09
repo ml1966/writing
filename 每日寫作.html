@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="每日寫作">
+<meta name="theme-color" content="#faf9f6">
+<title>每日寫作</title>
+<style>
+:root {
+  --bg: #faf9f6; --bg2: #f3f1ec; --bg3: #eae7e0;
+  --text: #1a1917; --text2: #6b6860; --text3: #a09d97;
+  --border: #dedad3; --accent: #3d6b4f; --accent-light: #e8f0eb;
+  --danger: #9b3a3a; --radius: 14px; --radius-sm: 8px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #18181a; --bg2: #222224; --bg3: #2c2c2f;
+    --text: #f0ede8; --text2: #9e9b96; --text3: #5e5c58;
+    --border: #333330; --accent: #6aab82; --accent-light: #1e2e23;
+    --danger: #e07070;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'PingFang TC', sans-serif; overflow: hidden; }
+
+#app { display: flex; flex-direction: column; height: 100%; padding-top: var(--safe-top); }
+
+/* Tab bar */
+.tabbar {
+  display: flex; border-top: 0.5px solid var(--border);
+  padding-bottom: var(--safe-bottom); background: var(--bg); flex-shrink: 0;
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0 6px; gap: 3px; border: none; background: none;
+  color: var(--text3); font-size: 10px; cursor: pointer; transition: color 0.15s;
+}
+.tab svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+.tab.active { color: var(--accent); }
+
+/* Pages */
+.page { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; flex-direction: column; }
+.page.active { display: flex; }
+
+/* Today */
+.today-header { padding: 20px 20px 0; flex-shrink: 0; }
+.today-date { font-size: 12px; color: var(--text3); letter-spacing: 0.04em; margin-bottom: 4px; }
+.today-title { font-size: 22px; font-weight: 600; }
+
+.prompt-box {
+  margin: 14px 20px 0; background: var(--accent-light);
+  border-radius: var(--radius); padding: 14px 16px;
+  flex-shrink: 0; position: relative;
+}
+.prompt-label { font-size: 11px; color: var(--accent); letter-spacing: 0.06em; margin-bottom: 6px; font-weight: 500; }
+.prompt-text { font-size: 16px; color: var(--text); line-height: 1.6; padding-right: 36px; }
+.prompt-refresh {
+  position: absolute; top: 12px; right: 12px; width: 30px; height: 30px;
+  border-radius: 50%; border: none; background: var(--bg); color: var(--accent);
+  font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+.editor-wrap { flex: 1; display: flex; flex-direction: column; padding: 12px 20px 0; min-height: 0; }
+#editor {
+  flex: 1; border: 0.5px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; font-size: 16px; line-height: 1.9;
+  color: var(--text); background: var(--bg); resize: none;
+  outline: none; font-family: inherit; min-height: 160px;
+}
+#editor:focus { border-color: var(--accent); }
+
+.editor-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0 12px; flex-shrink: 0;
+}
+.wordcount { font-size: 13px; color: var(--text3); }
+.save-btn {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 9px 22px;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+}
+
+/* AI panel */
+.ai-panel {
+  margin: 0 20px 16px; border: 0.5px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; flex-shrink: 0;
+}
+.ai-tabs { display: flex; border-bottom: 0.5px solid var(--border); }
+.ai-tab {
+  flex: 1; padding: 10px 4px; font-size: 12px; color: var(--text2);
+  border: none; background: none; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.15s;
+}
+.ai-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+.ai-content { padding: 12px 14px; }
+.ai-run-btn {
+  width: 100%; padding: 11px; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--accent); background: var(--accent-light);
+  color: var(--accent); font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.ai-result {
+  margin-top: 12px; padding: 12px 14px; background: var(--bg2);
+  border-radius: var(--radius-sm); font-size: 14px; line-height: 1.8;
+  color: var(--text2); display: none; white-space: pre-wrap;
+}
+.ai-result.show { display: block; }
+
+/* History */
+.page-header { padding: 20px 20px 16px; font-size: 22px; font-weight: 600; flex-shrink: 0; }
+.entry-list { flex: 1; overflow-y: auto; padding: 0 20px 20px; }
+.entry-card {
+  background: var(--bg2); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
+  border: 0.5px solid transparent; transition: border-color 0.15s;
+  -webkit-user-select: none;
+}
+.entry-card:active { border-color: var(--accent); }
+.entry-card-date { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+.entry-card-prompt { font-size: 13px; color: var(--accent); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-card-preview { font-size: 14px; color: var(--text2); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.empty-state { text-align: center; color: var(--text3); padding: 60px 20px; font-size: 15px; line-height: 2.2; }
+
+/* Modal */
+.modal-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+  display: none; align-items: flex-end; z-index: 100;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--bg); border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%; max-height: 88vh; display: flex; flex-direction: column;
+  padding-bottom: var(--safe-bottom);
+}
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 0.5px solid var(--border); flex-shrink: 0;
+}
+.modal-title { font-size: 15px; font-weight: 600; color: var(--text2); }
+.modal-close {
+  width: 28px; height: 28px; border-radius: 50%; border: none;
+  background: var(--bg3); color: var(--text2); font-size: 14px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.modal-body { flex: 1; overflow-y: auto; padding: 14px 20px; }
+.modal-prompt { font-size: 13px; color: var(--accent); margin-bottom: 12px; line-height: 1.6; }
+.modal-editor {
+  width: 100%; min-height: 200px; border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  font-size: 16px; line-height: 1.9; color: var(--text);
+  background: var(--bg); resize: none; outline: none; font-family: inherit;
+}
+.modal-editor:focus { border-color: var(--accent); }
+.modal-footer {
+  display: flex; gap: 10px; padding: 12px 20px;
+  border-top: 0.5px solid var(--border); flex-shrink: 0;
+}
+.modal-del {
+  flex: 1; padding: 11px; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border); background: none;
+  color: var(--danger); font-size: 14px; cursor: pointer;
+}
+.modal-save {
+  flex: 2; padding: 11px; border-radius: var(--radius-sm);
+  border: none; background: var(--accent); color: #fff;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+}
+
+/* AI in modal */
+.modal-ai-section { margin-top: 16px; border-top: 0.5px solid var(--border); padding-top: 14px; }
+.modal-ai-label { font-size: 12px; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.04em; }
+.modal-ai-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.modal-ai-tab {
+  padding: 6px 12px; border-radius: 20px; font-size: 12px;
+  border: 0.5px solid var(--border); background: none; color: var(--text2); cursor: pointer;
+}
+.modal-ai-tab.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+.modal-ai-run {
+  width: 100%; padding: 10px; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--accent); background: var(--accent-light);
+  color: var(--accent); font-size: 13px; cursor: pointer; font-weight: 500;
+}
+.modal-ai-result {
+  margin-top: 10px; padding: 12px 14px; background: var(--bg2);
+  border-radius: var(--radius-sm); font-size: 14px; line-height: 1.8;
+  color: var(--text2); display: none; white-space: pre-wrap;
+}
+.modal-ai-result.show { display: block; }
+
+/* Settings */
+.settings-body { padding: 0 20px 30px; flex: 1; overflow-y: auto; }
+.settings-section { margin-bottom: 28px; }
+.settings-label { font-size: 12px; color: var(--text3); letter-spacing: 0.06em; margin-bottom: 10px; padding: 0 4px; }
+.settings-card { background: var(--bg2); border-radius: var(--radius); overflow: hidden; }
+.settings-row {
+  display: flex; align-items: center; padding: 14px 16px;
+  border-bottom: 0.5px solid var(--border);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row-label { flex: 1; font-size: 15px; color: var(--text); }
+.settings-row-value { font-size: 14px; color: var(--text3); }
+
+.api-section { background: var(--bg2); border-radius: var(--radius); padding: 16px; }
+.api-section label { font-size: 14px; color: var(--text2); display: block; margin-bottom: 8px; }
+#api-key-input {
+  width: 100%; border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 11px 12px; font-size: 14px; color: var(--text); background: var(--bg);
+  outline: none; font-family: 'Menlo', monospace;
+}
+#api-key-input:focus { border-color: var(--accent); }
+.api-hint { font-size: 12px; color: var(--text3); margin-top: 8px; line-height: 1.7; }
+.api-hint a { color: var(--accent); text-decoration: none; }
+.api-save-btn {
+  margin-top: 12px; padding: 10px 22px; background: var(--accent);
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; cursor: pointer; display: block; width: 100%;
+}
+
+/* Toast */
+.toast {
+  position: absolute; bottom: calc(72px + var(--safe-bottom)); left: 50%;
+  transform: translateX(-50%); background: var(--text); color: var(--bg);
+  padding: 9px 20px; border-radius: 20px; font-size: 13px;
+  opacity: 0; transition: opacity 0.25s; pointer-events: none;
+  white-space: nowrap; z-index: 300;
+}
+.toast.show { opacity: 1; }
+
+/* Install banner */
+.install-banner {
+  margin: 12px 20px 0; background: var(--bg2); border: 0.5px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px; flex-shrink: 0; display: none;
+}
+.install-banner.show { display: block; }
+.install-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.install-steps { font-size: 12px; color: var(--text2); line-height: 1.8; }
+.install-close { float: right; background: none; border: none; color: var(--text3); font-size: 16px; cursor: pointer; margin-top: -2px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TODAY PAGE -->
+  <div class="page active" id="page-today">
+    <div class="today-header">
+      <div class="today-date" id="today-date"></div>
+      <div class="today-title">今天，寫點什麼</div>
+    </div>
+
+    <div class="install-banner" id="install-banner">
+      <button class="install-close" onclick="document.getElementById('install-banner').classList.remove('show')">✕</button>
+      <div class="install-title">📱 加入主畫面，像 app 一樣使用</div>
+      <div class="install-steps">點下方 Safari 的 <strong>分享</strong> 按鈕 → 選「<strong>加入主畫面</strong>」</div>
+    </div>
+
+    <div class="prompt-box">
+      <div class="prompt-label">✦ 今日提示</div>
+      <div class="prompt-text" id="prompt-text"></div>
+      <button class="prompt-refresh" id="prompt-refresh" title="換一個">↻</button>
+    </div>
+
+    <div class="editor-wrap">
+      <textarea id="editor" placeholder="從這裡開始…"></textarea>
+      <div class="editor-footer">
+        <span class="wordcount" id="wordcount">0 字</span>
+        <button class="save-btn" id="save-btn">儲存</button>
+      </div>
+    </div>
+
+    <div class="ai-panel">
+      <div class="ai-tabs">
+        <button class="ai-tab active" data-mode="suggest">延伸問題</button>
+        <button class="ai-tab" data-mode="optimize">優化建議</button>
+        <button class="ai-tab" data-mode="feedback">整體回饋</button>
+      </div>
+      <div class="ai-content">
+        <button class="ai-run-btn" id="ai-run-btn">✦ 請 AI 分析這篇文章</button>
+        <div class="ai-result" id="ai-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY PAGE -->
+  <div class="page" id="page-history">
+    <div class="page-header">過去紀錄</div>
+    <div class="entry-list" id="entry-list"></div>
+  </div>
+
+  <!-- SETTINGS PAGE -->
+  <div class="page" id="page-settings">
+    <div class="page-header">設定</div>
+    <div class="settings-body">
+      <div class="settings-section">
+        <div class="settings-label">AI 功能設定</div>
+        <div class="api-section">
+          <label>Anthropic API Key</label>
+          <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+          <div class="api-hint">
+            Key 只儲存在你的裝置本地，不會傳送到任何伺服器。<br>
+            前往 <a href="https://console.anthropic.com" onclick="openLink('https://console.anthropic.com');return false;">console.anthropic.com</a> 取得 Key。
+          </div>
+          <button class="api-save-btn" id="api-save-btn">儲存 Key</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">我的數據</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <span class="settings-row-label">累計篇數</span>
+            <span class="settings-row-value" id="stat-count">—</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label">累計字數</span>
+            <span class="settings-row-value" id="stat-words">—</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label">最長連續天數</span>
+            <span class="settings-row-value" id="stat-streak">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tabbar">
+    <button class="tab active" data-page="today">
+      <svg viewBox="0 0 24 24"><path d="M12 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M16 19h6m-3-3v6M8 10h8M8 14h5"/></svg>
+      今天
+    </button>
+    <button class="tab" data-page="history">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+      紀錄
+    </button>
+    <button class="tab" data-page="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      設定
+    </button>
+  </div>
+
+  <!-- Entry detail modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="modal-date"></div>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-prompt" id="modal-prompt"></div>
+        <textarea class="modal-editor" id="modal-editor"></textarea>
+
+        <div class="modal-ai-section">
+          <div class="modal-ai-label">AI 分析</div>
+          <div class="modal-ai-tabs">
+            <button class="modal-ai-tab active" data-mmode="suggest">延伸問題</button>
+            <button class="modal-ai-tab" data-mmode="optimize">優化建議</button>
+            <button class="modal-ai-tab" data-mmode="feedback">整體回饋</button>
+          </div>
+          <button class="modal-ai-run" id="modal-ai-run">✦ 分析這篇文章</button>
+          <div class="modal-ai-result" id="modal-ai-result"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-del" id="modal-del">刪除</button>
+        <button class="modal-save" id="modal-save">儲存修改</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+const PROMPTS = [
+  "寫一個你最近突然想起的小細節，可能是氣味、聲音、或一句話。",
+  "描述一個你從未告訴過任何人的想法。",
+  "你今天看到了什麼讓你停下來多看一眼的事物？",
+  "寫一封給五年後的自己的短信。",
+  "描述一個讓你感到平靜的地方——真實存在的或想像中的。",
+  "你最近有沒有改變了某個長久以來的想法？",
+  "寫一個只有開頭的故事：「那天，他們終於打開了那扇門……」",
+  "今天有什麼事讓你微笑，哪怕只有一瞬間？",
+  "如果你的某個習慣有自己的聲音，它會說什麼？",
+  "描述一個你錯過的機會，如果是現在，你會怎麼做？",
+  "寫下三個你從未對人說出口的感謝。",
+  "你最近一次感到真正好奇的是什麼？",
+  "描述你最喜歡的某個時段——不是事件，而是那段時間的質地。",
+  "如果今天是你生命的最後一個平凡日，你會注意到什麼？",
+  "寫一個以「我一直以為……」開頭的段落。",
+  "描述一個人，不說他們的外貌，只說他們的習慣。",
+  "你現在身體的哪個部位最疲憊？它想說什麼？",
+  "寫下一件你一直想做卻不斷推遲的事，以及你真正的阻礙是什麼。",
+  "如果你能與十年前的自己說一分鐘的話，你會說什麼？",
+  "描述一個讓你感到「這個世界還不錯」的微小瞬間。",
+  "寫一個你喜歡的謊言，或一個你討厭的真相。",
+  "你的某段記憶隨著時間變得模糊或改變了嗎？寫下你現在記得的版本。",
+  "描述「等待」這件事——用顏色、質感或聲音。",
+  "今天你是什麼樣的人？用第三人稱寫下來。",
+  "如果你的某個夢想開口說話，它會抱怨什麼？",
+  "寫一段對話，其中有一方完全不知道對方真正想說什麼。",
+  "你最近的睡前最後一個念頭是什麼？",
+  "描述一件小事如何改變了你的某一天。",
+  "寫一個沒有結局的故事開頭，只要氣氛。",
+  "你最近想念什麼，或者什麼人？"
+];
+
+const AI_SYSTEMS = {
+  suggest: "你是一位溫柔的寫作導師。請根據使用者的文章，提出3個能幫助他們深入探索的延伸問題。問題要有深度但不失溫暖。格式：每個問題獨立一行，前面加上數字和句點。只給問題，不要其他說明。",
+  optimize: "你是一位細心的文字編輯。請根據使用者的文章，提出3條具體的優化建議，包含句式、用詞或結構，並給出具體例子。格式：每條建議一段，前面加數字和句點。保持鼓勵的語氣。",
+  feedback: "你是一位有溫度的寫作夥伴。請給這篇文章一個整體回饋，先說最打動你的地方，再給一個可以更深入的方向。150字以內，語氣自然親切。"
+};
+
+let currentAiMode = 'suggest';
+let currentModalAiMode = 'suggest';
+let currentEditKey = null;
+
+// Helpers
+const $ = id => document.getElementById(id);
+const todayKey = () => new Date().toISOString().slice(0,10);
+
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function formatDate(key) {
+  const [y,m,d] = key.split('-');
+  const days = ['日','一','二','三','四','五','六'];
+  const day = new Date(key).getDay();
+  return `${y} 年 ${parseInt(m)} 月 ${parseInt(d)} 日　星期${days[day]}`;
+}
+
+// Data
+function getEntries() {
+  return Object.keys(localStorage)
+    .filter(k => k.startsWith('wp_entry_'))
+    .sort().reverse()
+    .map(k => ({ key: k.replace('wp_entry_',''), ...JSON.parse(localStorage.getItem(k)) }));
+}
+function saveEntry(key, data) { localStorage.setItem('wp_entry_' + key, JSON.stringify(data)); }
+function deleteEntry(key) { localStorage.removeItem('wp_entry_' + key); }
+
+function calcStreak() {
+  const keys = Object.keys(localStorage)
+    .filter(k => k.startsWith('wp_entry_'))
+    .map(k => k.replace('wp_entry_',''))
+    .sort().reverse();
+  if (!keys.length) return 0;
+  let streak = 0, cur = new Date();
+  cur.setHours(0,0,0,0);
+  for (const k of keys) {
+    const d = new Date(k);
+    const diff = Math.round((cur - d) / 86400000);
+    if (diff === 0 || diff === streak) { streak++; cur = d; }
+    else break;
+  }
+  return streak;
+}
+
+// Today
+function initToday() {
+  const d = new Date();
+  const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  $('today-date').textContent = `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日　${days[d.getDay()]}`;
+
+  let prompt = localStorage.getItem('wp_prompt_' + todayKey());
+  if (!prompt) {
+    prompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+    localStorage.setItem('wp_prompt_' + todayKey(), prompt);
+  }
+  $('prompt-text').textContent = prompt;
+
+  const saved = localStorage.getItem('wp_entry_' + todayKey());
+  if (saved) $('editor').value = JSON.parse(saved).text || '';
+  updateCount();
+
+  // Show install banner if not standalone
+  if (!window.navigator.standalone) {
+    setTimeout(() => $('install-banner').classList.add('show'), 1500);
+  }
+}
+
+$('prompt-refresh').onclick = () => {
+  const cur = $('prompt-text').textContent;
+  let p = cur;
+  while (p === cur) p = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+  localStorage.setItem('wp_prompt_' + todayKey(), p);
+  $('prompt-text').textContent = p;
+};
+
+$('editor').oninput = updateCount;
+function updateCount() {
+  $('wordcount').textContent = $('editor').value.replace(/\s/g,'').length + ' 字';
+}
+
+$('save-btn').onclick = () => {
+  const text = $('editor').value;
+  const prompt = $('prompt-text').textContent;
+  saveEntry(todayKey(), { date: todayKey(), prompt, text });
+  showToast('已儲存 ✓');
+  updateStats();
+};
+
+// AI (today page)
+document.querySelectorAll('.ai-tab').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.ai-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentAiMode = btn.dataset.mode;
+    $('ai-result').classList.remove('show');
+  };
+});
+
+$('ai-run-btn').onclick = () => runAI($('editor').value, currentAiMode, 'ai-result');
+
+async function runAI(text, mode, resultId) {
+  if (!text.trim()) { showToast('請先寫點東西'); return; }
+  const apiKey = localStorage.getItem('anthropic_api_key');
+  if (!apiKey) { showToast('請先在設定頁輸入 API Key'); return; }
+
+  const result = $(resultId);
+  result.textContent = '分析中…';
+  result.className = result.className.replace('show','') + ' show';
+  result.style.color = 'var(--text3)';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        system: AI_SYSTEMS[mode],
+        messages: [{ role: 'user', content: text }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    result.textContent = data.content[0].text;
+    result.style.color = 'var(--text2)';
+  } catch(e) {
+    result.textContent = '發生錯誤：' + e.message;
+    result.style.color = 'var(--danger)';
+  }
+}
+
+// History
+function renderHistory() {
+  const entries = getEntries();
+  const list = $('entry-list');
+  if (!entries.length) {
+    list.innerHTML = '<div class="empty-state">還沒有任何紀錄<br>從今天開始寫第一篇吧 ✦</div>';
+    return;
+  }
+  list.innerHTML = entries.map(e => `
+    <div class="entry-card" data-key="${e.key}">
+      <div class="entry-card-date">${formatDate(e.key)}</div>
+      <div class="entry-card-prompt">${e.prompt || ''}</div>
+      <div class="entry-card-preview">${e.text ? e.text.trim() : '（空白）'}</div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.entry-card').forEach(card => {
+    card.onclick = () => openModal(card.dataset.key);
+  });
+}
+
+// Modal
+function openModal(key) {
+  currentEditKey = key;
+  const entry = JSON.parse(localStorage.getItem('wp_entry_' + key));
+  $('modal-date').textContent = formatDate(key);
+  $('modal-prompt').textContent = entry.prompt || '';
+  $('modal-editor').value = entry.text || '';
+  $('modal-ai-result').classList.remove('show');
+  $('modal').classList.add('show');
+}
+
+$('modal-close').onclick = () => $('modal').classList.remove('show');
+$('modal').onclick = e => { if (e.target === $('modal')) $('modal').classList.remove('show'); };
+
+$('modal-save').onclick = () => {
+  if (!currentEditKey) return;
+  const entry = JSON.parse(localStorage.getItem('wp_entry_' + currentEditKey));
+  entry.text = $('modal-editor').value;
+  saveEntry(currentEditKey, entry);
+  $('modal').classList.remove('show');
+  showToast('修改已儲存 ✓');
+  renderHistory();
+  updateStats();
+  if (currentEditKey === todayKey()) {
+    $('editor').value = entry.text;
+    updateCount();
+  }
+};
+
+$('modal-del').onclick = () => {
+  if (!confirm('確定要刪除這篇？')) return;
+  deleteEntry(currentEditKey);
+  $('modal').classList.remove('show');
+  showToast('已刪除');
+  renderHistory();
+  updateStats();
+  if (currentEditKey === todayKey()) { $('editor').value = ''; updateCount(); }
+};
+
+// Modal AI
+document.querySelectorAll('.modal-ai-tab').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.modal-ai-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentModalAiMode = btn.dataset.mmode;
+    $('modal-ai-result').classList.remove('show');
+  };
+});
+
+$('modal-ai-run').onclick = () => runAI($('modal-editor').value, currentModalAiMode, 'modal-ai-result');
+
+// Settings
+function initSettings() {
+  $('api-key-input').value = localStorage.getItem('anthropic_api_key') || '';
+  updateStats();
+}
+
+$('api-save-btn').onclick = () => {
+  const key = $('api-key-input').value.trim();
+  if (key) { localStorage.setItem('anthropic_api_key', key); showToast('API Key 已儲存 ✓'); }
+  else { localStorage.removeItem('anthropic_api_key'); showToast('API Key 已清除'); }
+};
+
+function updateStats() {
+  const entries = getEntries();
+  $('stat-count').textContent = entries.length + ' 篇';
+  const total = entries.reduce((s,e) => s + (e.text||'').replace(/\s/g,'').length, 0);
+  $('stat-words').textContent = total.toLocaleString() + ' 字';
+  $('stat-streak').textContent = calcStreak() + ' 天';
+}
+
+// Navigation
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    const page = tab.dataset.page;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $('page-' + page).classList.add('active');
+    if (page === 'history') renderHistory();
+    if (page === 'settings') initSettings();
+  };
+});
+
+// Init
+initToday();
+updateStats();
+</script>
+</body>
+</html>
